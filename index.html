@@ -2,26 +2,35 @@
 <html lang="pt-BR">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+        <meta name="theme-color" content="#000000">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <link rel="manifest" href="./manifest.webmanifest">
         <title>A-Frame Playground</title>
         <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
         <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-physics-system@v4.2.2/dist/aframe-physics-system.min.js"></script>
         <script src="./mobile-vr.js" defer></script>
         <style>
-            #mobile-vr-controls {
+            html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+            #cardboard-mask { display: none; }
+            html.cardboard-active #cardboard-mask {
+                display: flex;
                 position: fixed;
-                top: max(12px, env(safe-area-inset-top));
-                left: max(12px, env(safe-area-inset-left));
-                z-index: 1000;
-                max-width: min(360px, calc(100vw - 24px));
-                padding: 12px;
-                border-radius: 8px;
-                background: #17212be6;
-                color: white;
-                font: 14px system-ui, sans-serif;
+                inset: 0;
+                z-index: 10;
+                pointer-events: none;
+                background: transparent;
             }
-            #mobile-vr-controls button { min-height: 44px; padding: 8px 16px; }
-            #mobile-vr-status { margin: 8px 0 0; }
+            #cardboard-mask::before, #cardboard-mask::after {
+                content: "";
+                width: 50%;
+                height: 100%;
+                background: radial-gradient(ellipse 47% 46% at center,
+                    transparent 97%, #000 100%);
+            }
+            html.cardboard-active .a-enter-vr,
+            html.cardboard-active .a-enter-ar { display: none !important; }
         </style>
     </head>
     <body>
@@ -34,10 +43,7 @@
         </a-scene> -->
 
         <!-- LOAD LOCAL OBJECT -->
-        <section id="mobile-vr-controls" hidden aria-label="VR para celular">
-            <button id="mobile-vr-toggle" type="button" aria-pressed="false" disabled>Entrar em VR (Cardboard)</button>
-            <p id="mobile-vr-status" role="status">Use o celular na horizontal com um visor Cardboard.</p>
-        </section>
+        <div id="cardboard-mask" aria-hidden="true"></div>
         <a-scene physics="debug: true" xr-mode-ui="enabled: true; XRMode: vr"
                  device-orientation-permission-ui="enabled: true; deviceMotionMessage: Permita o acesso à orientação para olhar ao redor movendo o iPhone.; allowButtonText: Permitir; denyButtonText: Agora não; cancelButtonText: Fechar; httpsMessage: Abra este site por HTTPS para usar os sensores e o modo VR.">
             <a-assets>

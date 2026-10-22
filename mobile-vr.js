@@ -3,13 +3,9 @@
 // entering a WebXR session, preserving look-controls device orientation.
 (() => {
     const scene = document.querySelector('a-scene');
-    const panel = document.querySelector('#mobile-vr-controls');
-    const button = document.querySelector('#mobile-vr-toggle');
-    const status = document.querySelector('#mobile-vr-status');
     if (!AFRAME.utils.device.isMobile() &&
         !AFRAME.utils.device.isMobileDeviceRequestingDesktopSite()) return;
 
-    panel.hidden = false;
     const stereo = new AFRAME.THREE.StereoCamera();
     const size = new AFRAME.THREE.Vector2();
     const viewport = new AFRAME.THREE.Vector4();
@@ -17,14 +13,48 @@
     stereo.aspect = 0.5;
     let active = false;
 
-    function updateUI() {
-        button.textContent = active ? 'Sair do VR' : 'Entrar em VR (Cardboard)';
-        button.setAttribute('aria-pressed', String(active));
-        status.textContent = active
-            ? (window.innerWidth < window.innerHeight
-                ? 'Gire o iPhone para a horizontal e desative o bloqueio de rotação.'
-                : 'Modo Cardboard ativo. Toque em Sair do VR para voltar.')
-            : 'Use o celular na horizontal com um visor Cardboard.';
+    let ready = false;
+    let fullscreenPending = false;
+    let ownsFullscreen = false;
+    const landscape = window.matchMedia('(orientation: landscape)');
+
+    function isLandscape() {
+        // Screen orientation is unaffected by the keyboard or Safari toolbars.
+        if (window.screen.orientation?.type) {
+            return window.screen.orientation.type.startsWith('landscape');
+        }
+        if (typeof window.orientation === 'number') {
+            return Math.abs(window.orientation) === 90;
+        }
+        return landscape.matches;
+    }
+
+    async function requestFullscreen() {
+        if (!active || fullscreenPending || document.fullscreenElement ||
+            !document.fullscreenEnabled || !document.documentElement.requestFullscreen) return;
+        fullscreenPending = true;
+        try {
+            await document.documentElement.requestFullscreen({navigationUI: 'hide'});
+            ownsFullscreen = true;
+            // The device may have returned to portrait while the request was pending.
+            syncOrientation();
+        } catch {
+            // Rotation alone does not grant user activation. A tap on the canvas
+            // retries on supported browsers; installed web apps already fill the screen.
+        } finally {
+            fullscreenPending = false;
+        }
+    }
+
+    function syncOrientation() {
+        const wasActive = active;
+        active = ready && isLandscape() && !scene.is('vr-mode');
+        document.documentElement.classList.toggle('cardboard-active', active);
+        if (active && !wasActive) requestFullscreen();
+        if (!active && ownsFullscreen && document.fullscreenElement) {
+            ownsFullscreen = false;
+            document.exitFullscreen().catch(() => {});
+        }
     }
 
     function setup() {
@@ -61,50 +91,24 @@
                 renderer.autoClear = autoClear;
             }
         };
-        button.disabled = false;
+        ready = true;
+        syncOrientation();
     }
 
-    button.addEventListener('click', async () => {
-        if (active) {
-            active = false;
-            updateUI();
-            return;
-        }
-        if (!window.isSecureContext) {
-            status.textContent = 'Abra este site por HTTPS para habilitar os sensores.';
-            return;
-        }
-        button.disabled = true;
-        try {
-            if (typeof window.DeviceOrientationEvent === 'undefined') {
-                throw new Error('Este navegador não disponibiliza o sensor de orientação. Abra no Safari.');
-            }
-            if (typeof window.DeviceOrientationEvent.requestPermission === 'function') {
-                const permission = await window.DeviceOrientationEvent.requestPermission();
-                if (permission !== 'granted') {
-                    throw new Error('Acesso à orientação negado. Permita o acesso nas configurações do site e recarregue.');
-                }
-                scene.components['device-orientation-permission-ui'].permissionGranted = true;
-                scene.emit('deviceorientationpermissiongranted');
-            }
-            active = true;
-            updateUI();
-        } catch (error) {
-            status.textContent = error.message || 'Não foi possível ativar o modo VR. Tente novamente no Safari.';
-        } finally {
-            button.disabled = false;
-        }
+    window.addEventListener('resize', syncOrientation);
+    window.addEventListener('orientationchange', syncOrientation);
+    window.screen.orientation?.addEventListener('change', syncOrientation);
+    landscape.addEventListener('change', syncOrientation);
+    // No controls cover the lenses. A canvas tap can enable browser fullscreen.
+    scene.addEventListener('click', (event) => {
+        if (event.target === scene.canvas) requestFullscreen();
     });
-    window.addEventListener('resize', updateUI);
-    window.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') { active = false; updateUI(); }
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement) ownsFullscreen = false;
+        syncOrientation();
     });
-    scene.addEventListener('enter-vr', () => {
-        active = false;
-        panel.hidden = true;
-        updateUI();
-    });
-    scene.addEventListener('exit-vr', () => { panel.hidden = false; });
+    scene.addEventListener('enter-vr', syncOrientation);
+    scene.addEventListener('exit-vr', syncOrientation);
     if (scene.hasLoaded) setup();
     else scene.addEventListener('loaded', setup, {once: true});
 })();

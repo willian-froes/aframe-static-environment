@@ -1,0 +1,10 @@
+{
+  "name": "A-Frame Playground",
+  "short_name": "A-Frame VR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000"
+}
