@@ -6,6 +6,23 @@
         <title>A-Frame Playground</title>
         <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
         <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-physics-system@v4.2.2/dist/aframe-physics-system.min.js"></script>
+        <script src="./mobile-vr.js" defer></script>
+        <style>
+            #mobile-vr-controls {
+                position: fixed;
+                top: max(12px, env(safe-area-inset-top));
+                left: max(12px, env(safe-area-inset-left));
+                z-index: 1000;
+                max-width: min(360px, calc(100vw - 24px));
+                padding: 12px;
+                border-radius: 8px;
+                background: #17212be6;
+                color: white;
+                font: 14px system-ui, sans-serif;
+            }
+            #mobile-vr-controls button { min-height: 44px; padding: 8px 16px; }
+            #mobile-vr-status { margin: 8px 0 0; }
+        </style>
     </head>
     <body>
         <!-- <a-scene>
@@ -17,7 +34,12 @@
         </a-scene> -->
 
         <!-- LOAD LOCAL OBJECT -->
-        <a-scene physics="debug: true">
+        <section id="mobile-vr-controls" hidden aria-label="VR para celular">
+            <button id="mobile-vr-toggle" type="button" aria-pressed="false" disabled>Entrar em VR (Cardboard)</button>
+            <p id="mobile-vr-status" role="status">Use o celular na horizontal com um visor Cardboard.</p>
+        </section>
+        <a-scene physics="debug: true" xr-mode-ui="enabled: true; XRMode: vr"
+                 device-orientation-permission-ui="enabled: true; deviceMotionMessage: Permita o acesso à orientação para olhar ao redor movendo o iPhone.; allowButtonText: Permitir; denyButtonText: Agora não; cancelButtonText: Fechar; httpsMessage: Abra este site por HTTPS para usar os sensores e o modo VR.">
             <a-assets>
                 <a-asset-item id="green_hill" src="./assets/green_hill_low_poly/scene.gltf"></a-asset-item>  
             </a-assets>
@@ -26,7 +48,7 @@
             <a-box position="0 2 -3" width="40" height="1" depth="40" visible="false" static-body></a-box>
 
             <a-entity id="player" position="0 5 0" dynamic-body="shape: sphere; sphereRadius: 0.5; angularFactor: 0 1 0;">
-                <a-camera position="0 1.6 0" look-controls></a-camera>
+                <a-camera position="0 1.6 0" look-controls="magicWindowTrackingEnabled: true"></a-camera>
             </a-entity>
         </a-scene>
     </body>
